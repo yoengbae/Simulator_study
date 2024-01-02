@@ -14,7 +14,8 @@ enum class op {
     BNE,
     SLT,
     J,
-    JAL
+    JAL,
+    NOP
 };
 
 struct instruction
@@ -24,12 +25,6 @@ struct instruction
         
 };
 
-uint32_t reg_to_num(string s, int pos){
-    string ss = s.substr(pos);
-    return stoi(ss);
-}
+int reg_to_num(string s, int pos);
 
-uint32_t reg_to_num(string s, int pos, int cnt){
-    string ss = s.substr(pos, cnt);
-    return stoi(ss);
-}
+int reg_to_num(string s, int pos, int cnt);

@@ -1,9 +1,33 @@
 #include "Processor.h"
 
 
-Processor::Processor(){
+
+Processor::Processor(string re, string me){
+    Init_regs_state(re);
+    Init_data_mem_state(me);
     PC = 0;
     cycle = 0;
+}
+
+void Processor::Init_regs_state(string re){
+    ifstream fs(re);
+    int a;
+	for (int i = 0; i < 31; i++ ) {
+        fs >> a;
+        reg[i] = a;
+    }
+    fs.close();
+}
+
+void Processor::Init_data_mem_state(string me){
+    ifstream fs(me);
+    int a;
+    int i=0;
+    while(fs >> a){
+        reg[i] = a;
+        i++;
+    }
+    fs.close();
 }
 
 void Processor::load_program(string program){
@@ -17,7 +41,9 @@ void Processor::load_program(string program){
 }
 
 void Processor::fetch(){
-    ifid.line = inst_mem[PC];
+    if(PC < inst_mem.size()){
+        ifid.line = inst_mem[PC];
+    }
     ifid.PC = ++PC;
 }
 
@@ -25,7 +51,6 @@ void Processor::decode(){
     istringstream iss(ifid.line);
     instruction istr;
     string opcode;
-    bool hazard;
 
     idex.PC = ifid.PC;
     iss >> opcode;
@@ -104,16 +129,22 @@ void Processor::decode(){
         iss >> istr.immediate_;
         idex.imm = reg_to_num(istr.immediate_, 1);
     }
+    else if(opcode == "NOP"){
+        istr.opcode_ = op::NOP;
+    }
     else{
-        cout << "unknown";
+        cout << "unknown op\n";
         exit(1);
     }
 
     //todo : stall
     //idex = 0 and no PC update and no ifid update
-    //https://gofo-coding.tistory.com/entry/Data-Hazard#title-11
-    hazard = hazard_detect(istr);
     idex.istr = istr;
+    if(hazard_detect(istr)){
+        idex.istr.opcode_ = op::NOP;
+        PC--;
+    }
+    
 }
 
 void Processor::execute(){
@@ -162,6 +193,7 @@ void Processor::execute(){
         reg[31] = PC;
         PC = idex.imm;
         break;
+    case op::NOP:
     default:
         break;
     }
@@ -196,9 +228,8 @@ void Processor::mem(){
             PC = exmem.PC;
         break;
     case op::J:
-        break;
     case op::JAL:
-        break;
+    case op::NOP:
     default:
         break;
     }
@@ -219,15 +250,11 @@ void Processor::write_back(){
         reg[memwb.Rd] = memwb.LR;
         break;
     case op::SW:
-        break;
     case op::BEQ:
-        break;
     case op::BNE:
-        break;
     case op::J:
-        break;
     case op::JAL:
-        break;
+    case op::NOP:
     default:
         break;
     }
@@ -247,10 +274,12 @@ bool Processor::hazard_detect(instruction in){
 }
 
 void Processor::run(){
-    write_back();
-    mem();
-    execute();
-    decode();
-    fetch();
-    cycle++;
+    while(PC < inst_mem.size() + 5){
+        write_back();
+        mem();
+        execute();
+        decode();
+        fetch();
+        cycle++;
+    }
 }
